@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Подбор стекла</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 16px; }
+    label { display:block; margin: 12px 0 6px; font-weight: 600; }
+    input { width: 100%; padding: 10px; font-size: 16px; }
+    button { width: 100%; padding: 12px; font-size: 16px; margin-top: 14px; }
+    .hint { margin-top: 10px; opacity: .75; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h3>Подбор стекла по размеру</h3>
+
+  <label>Длина (мм)</label>
+  <input id="h" inputmode="decimal" placeholder="Напр. 155 или 155,5">
+
+  <label>Ширина (мм)</label>
+  <input id="w" inputmode="decimal" placeholder="Напр. 72 или 72,5">
+
+  <button id="btn">Поиск</button>
+  <div class="hint">После «Поиск» форма закроется и бот покажет результат.</div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    document.getElementById('btn').addEventListener('click', () => {
+      const height = document.getElementById('h').value.trim();
+      const width  = document.getElementById('w').value.trim();
+
+      tg.sendData(JSON.stringify({ height, width }));
+      tg.close();
+    });
+  </script>
+</body>
+</html>

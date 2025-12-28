@@ -5,13 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Подбор стекла</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    body { font-family: system-ui, sans-serif; padding: 16px; }
-    label { display:block; margin: 12px 0 6px; font-weight: 600; }
-    input { width: 100%; padding: 10px; font-size: 16px; }
-    button { width: 100%; padding: 12px; font-size: 16px; margin-top: 14px; }
-    .hint { margin-top: 10px; opacity: .75; font-size: 13px; }
-  </style>
+<style>
+  :root{
+    --pad: 16px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: system-ui, sans-serif;
+    margin: 0;
+
+    /* одинаковые отступы + учёт safe-area (iPhone) */
+    padding:
+      calc(var(--pad) + env(safe-area-inset-top, 0px))
+      calc(var(--pad) + env(safe-area-inset-right, 0px))
+      calc(var(--pad) + env(safe-area-inset-bottom, 0px))
+      calc(var(--pad) + env(safe-area-inset-left, 0px));
+
+    background: #fff;
+  }
+
+  h3 { margin: 0 0 12px; }
+
+  label {
+    display: block;
+    margin: 12px 0 6px;
+    font-weight: 600;
+  }
+
+  input {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+  }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    margin-top: 14px;
+  }
+
+  .hint {
+    margin-top: 10px;
+    opacity: .75;
+    font-size: 13px;
+  }
+</style>
+
 </head>
 <body>
   <h3>Подбор стекла по размеру</h3>

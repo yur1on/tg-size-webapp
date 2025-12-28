@@ -51,6 +51,16 @@
       background: #fff;
     }
 
+    .note{
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 10px;
+      font-size: 13px;
+      opacity: .9;
+      line-height: 1.35;
+    }
+
     button{
       width: 100%;
       padding: 12px;
@@ -90,6 +100,11 @@
     <img class="hintimg" src="img/width.png" alt="Где измерять ширину стекла">
   </div>
 
+  <div class="note">
+    ℹ️ Значения автоматически округляются до <b>0,5 мм</b>.
+    Пример: 155,2 → 155; 155,3 → 155,5.
+  </div>
+
   <button id="btn">Поиск</button>
   <div class="hint">После «Поиск» форма закроется и бот покажет результат.</div>
 
@@ -97,10 +112,49 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
+    const hInput = document.getElementById('h');
+    const wInput = document.getElementById('w');
+
+    function parseNumber(val) {
+      // разрешаем запятую
+      const s = (val || '').toString().trim().replace(',', '.');
+      const x = Number(s);
+      return Number.isFinite(x) ? x : null;
+    }
+
+    function roundToHalf(x) {
+      return Math.round(x * 2) / 2;
+    }
+
+    function formatRu(x) {
+      // 155 -> "155", 155.5 -> "155,5"
+      const isInt = Math.abs(x - Math.round(x)) < 1e-9;
+      return isInt ? String(Math.round(x)) : String(x).replace('.', ',');
+    }
+
+    function normalizeInput(el) {
+      const x = parseNumber(el.value);
+      if (x === null) return null;
+
+      const r = roundToHalf(x);
+      el.value = formatRu(r);
+      return r;
+    }
+
+    // округляем когда пользователь закончил ввод (потерял фокус)
+    hInput.addEventListener('blur', () => normalizeInput(hInput));
+    wInput.addEventListener('blur', () => normalizeInput(wInput));
+
     document.getElementById('btn').addEventListener('click', () => {
-      const height = document.getElementById('h').value.trim();
-      const width  = document.getElementById('w').value.trim();
-      tg.sendData(JSON.stringify({ height, width }));
+      const h = normalizeInput(hInput);
+      const w = normalizeInput(wInput);
+
+      if (h === null || w === null) {
+        alert('Введите длину и ширину числами (можно с запятой).');
+        return;
+      }
+
+      tg.sendData(JSON.stringify({ height: formatRu(h), width: formatRu(w) }));
       tg.close();
     });
   </script>

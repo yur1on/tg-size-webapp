@@ -312,7 +312,8 @@
 
   <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
+    // расширяем WebApp по высоте (как у тебя)
+    try { tg.expand(); } catch(e){ /* ignore */ }
 
     const hInput = document.getElementById('h');
     const wInput = document.getElementById('w');
@@ -327,17 +328,19 @@
       return Math.round(x * 2) / 2;
     }
 
-    function formatRu(x) {
+    function formatRuNumber(x) {
+      // возвращаем с запятой для отображения, но для отправки используем число
       const isInt = Math.abs(x - Math.round(x)) < 1e-9;
-      return isInt ? String(Math.round(x)) : String(x).replace('.', ',');
+      if (isInt) return String(Math.round(x));
+      // заменим точку на запятую для отображения
+      return String(x).replace('.', ',');
     }
 
     function normalizeInput(el) {
       const x = parseNumber(el.value);
       if (x === null) return null;
-
       const r = roundToHalf(x);
-      el.value = formatRu(r);
+      el.value = formatRuNumber(r);
       return r;
     }
 
@@ -345,16 +348,28 @@
     wInput.addEventListener('blur', () => normalizeInput(wInput));
 
     document.getElementById('btn').addEventListener('click', () => {
-      const h = normalizeInput(hInput);
-      const w = normalizeInput(wInput);
+      const hVal = normalizeInput(hInput);
+      const wVal = normalizeInput(wInput);
 
-      if (h === null || w === null) {
+      if (hVal === null || wVal === null) {
         alert('Введите длину и ширину числами (можно с запятой).');
         return;
       }
 
-      tg.sendData(JSON.stringify({ height: formatRu(h), width: formatRu(w) }));
-      tg.close();
+      // Лог в консоль (полезно при отладке WebApp)
+      console.log('WebApp: sending payload to bot ->', { height: hVal, width: wVal });
+
+      // ОТПРАВЛЯЕМ ЧИСЛА (не строки). Это надёжнее.
+      try {
+        tg.sendData(JSON.stringify({ height: hVal, width: wVal }));
+        // даём 200–400ms чтобы отправка успела, затем закрываем WebApp
+        setTimeout(() => {
+          try { tg.close(); } catch(e) { /* ignore */ }
+        }, 250);
+      } catch (err) {
+        console.error('Ошибка при отправке данных в бот:', err);
+        alert('Ошибка отправки данных боту. Попробуйте снова.');
+      }
     });
   </script>
 </body>

@@ -67,7 +67,6 @@
         radial-gradient(900px 600px at 85% 15%, rgba(34,211,238,.30), transparent 55%),
         linear-gradient(180deg, #eafff4, #e8fbff);
 
-      /* размеры сеток */
       background-size:
         16px 16px,
         16px 16px,
@@ -76,15 +75,7 @@
         auto,
         auto,
         auto;
-
-      background-position:
-        0 0,
-        0 0,
-        0 0,
-        0 0,
-        0 0,
-        0 0,
-        0 0;
+      background-position: 0 0, 0 0, 0 0, 0 0, 0 0, 0 0, 0 0;
     }
 
     /* фон в тёмной теме — та же клетка, но темнее */
@@ -108,10 +99,7 @@
       }
     }
 
-    .wrap{
-      max-width: 540px;
-      margin: 0 auto;
-    }
+    .wrap{ max-width: 540px; margin: 0 auto; }
 
     .header{
       display: flex;
@@ -224,12 +212,22 @@
       font-size: 13px;
       line-height: 1.35;
     }
-
     .note b{ color: var(--text); }
 
-    .actions{
-      margin-top: 14px;
+    /* ✅ новая строка "Округлено..." */
+    .roundedLine{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px dashed rgba(6,182,212,.45);
+      background: rgba(6,182,212,.08);
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.35;
     }
+    .roundedLine b{ color: var(--text); }
+
+    .actions{ margin-top: 14px; }
 
     .btn{
       width: 100%;
@@ -274,7 +272,7 @@
 
     <div class="card">
       <p class="subtitle">
-        Введите размеры стекла в мм. Мы автоматически округлим значения до <b>0,5 мм</b>.
+        Введите размеры стекла в мм. Значения автоматически округляются до <b>0,5 мм</b>.
       </p>
 
       <div class="field">
@@ -303,6 +301,11 @@
         ℹ️ Пример округления: 155,2 → 155; 155,3 → 155,5.
       </div>
 
+      <!-- ✅ новая строка статуса округления -->
+      <div class="roundedLine" id="roundedLine">
+        Округлено: <b>—</b>
+      </div>
+
       <div class="actions">
         <button class="btn" id="btn">Найти стекло</button>
         <div class="helper">После нажатия форма закроется, и бот покажет результаты.</div>
@@ -311,12 +314,18 @@
   </div>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    // расширяем WebApp по высоте (как у тебя)
-    try { tg.expand(); } catch(e){ /* ignore */ }
+    const tg = window.Telegram?.WebApp;
+
+    if (!tg) {
+      console.warn("Telegram.WebApp недоступен. Откройте страницу через кнопку в Telegram.");
+    } else {
+      try { tg.ready(); } catch(e) {}
+      try { tg.expand(); } catch(e) {}
+    }
 
     const hInput = document.getElementById('h');
     const wInput = document.getElementById('w');
+    const roundedLine = document.getElementById('roundedLine');
 
     function parseNumber(val) {
       const s = (val || '').toString().trim().replace(',', '.');
@@ -329,11 +338,8 @@
     }
 
     function formatRuNumber(x) {
-      // возвращаем с запятой для отображения, но для отправки используем число
       const isInt = Math.abs(x - Math.round(x)) < 1e-9;
-      if (isInt) return String(Math.round(x));
-      // заменим точку на запятую для отображения
-      return String(x).replace('.', ',');
+      return isInt ? String(Math.round(x)) : String(x).replace('.', ',');
     }
 
     function normalizeInput(el) {
@@ -344,31 +350,58 @@
       return r;
     }
 
-    hInput.addEventListener('blur', () => normalizeInput(hInput));
-    wInput.addEventListener('blur', () => normalizeInput(wInput));
+    // ✅ обновление строки "Округлено"
+    function updateRoundedPreview() {
+      const h = parseNumber(hInput.value);
+      const w = parseNumber(wInput.value);
+
+      const hTxt = (h === null) ? "—" : formatRuNumber(roundToHalf(h));
+      const wTxt = (w === null) ? "—" : formatRuNumber(roundToHalf(w));
+
+      roundedLine.innerHTML = `Округлено: <b>${hTxt} × ${wTxt} мм</b>`;
+    }
+
+    // обновляем при вводе (без изменения значения в поле)
+    hInput.addEventListener('input', updateRoundedPreview);
+    wInput.addEventListener('input', updateRoundedPreview);
+
+    // а при потере фокуса — ещё и подменяем значение на округлённое
+    hInput.addEventListener('blur', () => { normalizeInput(hInput); updateRoundedPreview(); });
+    wInput.addEventListener('blur', () => { normalizeInput(wInput); updateRoundedPreview(); });
+
+    // начальное состояние
+    updateRoundedPreview();
 
     document.getElementById('btn').addEventListener('click', () => {
       const hVal = normalizeInput(hInput);
       const wVal = normalizeInput(wInput);
+      updateRoundedPreview();
 
       if (hVal === null || wVal === null) {
         alert('Введите длину и ширину числами (можно с запятой).');
         return;
       }
 
-      // Лог в консоль (полезно при отладке WebApp)
-      console.log('WebApp: sending payload to bot ->', { height: hVal, width: wVal });
+      // ✅ источник для аналитики (menu/cmd/unknown)
+      const src = new URLSearchParams(window.location.search).get('src') || 'unknown';
 
-      // ОТПРАВЛЯЕМ ЧИСЛА (не строки). Это надёжнее.
+      const payload = { height: hVal, width: wVal, src };
+
+      console.log('WebApp: sendData ->', payload);
+
+      if (!tg) {
+        alert("Откройте форму через Telegram-кнопку, чтобы отправить данные боту.");
+        return;
+      }
+
       try {
-        tg.sendData(JSON.stringify({ height: hVal, width: wVal }));
-        // даём 200–400ms чтобы отправка успела, затем закрываем WebApp
+        tg.sendData(JSON.stringify(payload));
         setTimeout(() => {
-          try { tg.close(); } catch(e) { /* ignore */ }
+          try { tg.close(); } catch(e) {}
         }, 250);
       } catch (err) {
-        console.error('Ошибка при отправке данных в бот:', err);
-        alert('Ошибка отправки данных боту. Попробуйте снова.');
+        console.error('Ошибка sendData:', err);
+        alert('Ошибка отправки данных. Попробуйте снова.');
       }
     });
   </script>
